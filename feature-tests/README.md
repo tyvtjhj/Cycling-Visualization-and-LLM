@@ -43,6 +43,8 @@
 ```
 feature-tests/
 ├─ README.md                      本文件
+├─ schema.sql                     测试库建表脚本，见第五节
+├─ feature_test.db                测试库文件，不入仓库，见第五节
 ├─ metrics/                       例：指标计算
 │  ├─ run.py                      该功能的运行入口
 │  ├─ cases.md                    用例清单与记录
@@ -75,7 +77,71 @@ feature-tests/
 - 判定只有三档：通过、未通过、不可判定（写明原因）。**不可判定不算通过。**
 - 数据缺失导致指标不可计算的情况，本身就是一条用例，判据是"是否正确地标记为不可计算"，而不是硬凑一个数。
 
-## 五、运行与前置条件
+## 五、功能测试库（SQLite）
+
+功能测试共用的数据库，用于记录用户与导入文件台账，对应项目文档 6.6 的账户段与导入段。
+
+| 项目 | 位置 |
+|---|---|
+| 数据库文件 | `feature-tests/feature_test.db`（已 gitignore，不入仓库） |
+| 建表脚本 | `feature-tests/schema.sql`（唯一事实来源，改表先改脚本） |
+
+库文件不入仓库的理由：运行测试时会写入用户名、口令哈希与个人文件路径，属个人数据；而库可从 `schema.sql` 随时重建，无需版本化。换机器或库损坏时，删掉库文件重新执行建库命令即可。
+
+当前只建两张表，列结构取自 6.6；用户的个人训练参数按需并入 `users`，正式库仍按 6.6 拆为用户与用户档案两张表。
+
+**表1 `users` — 用户信息与个人训练参数**
+
+| 列 | 类型 | 说明 |
+|---|---|---|
+| id | INTEGER | 主键，自增 |
+| username | TEXT | 登录名，唯一 |
+| password_hash | TEXT | 口令哈希，禁止存明文 |
+| display_name | TEXT | 展示名 |
+| ftp | INTEGER | 入参功能阈值功率，单位 W，见 D17；与派生值 eFTP 分离 |
+| weight_kg | REAL | 体重，单位 kg |
+| max_heart_rate | INTEGER | 最大心率，以用户档案手动设定值为准，见 D16 |
+| created_at / updated_at | TEXT | 创建与更新时间 |
+
+三个参数列允许为空：未填写时相关指标按不可计算处理，不硬凑数值。
+
+**表2 `files` — 用户导入文件的位置与台账**
+
+| 列 | 类型 | 说明 |
+|---|---|---|
+| id | INTEGER | 主键，自增 |
+| user_id | INTEGER | 外键指向 `users.id`，级联删除 |
+| original_name | TEXT | 原始文件名，供展示与下载，与磁盘上的名字解耦 |
+| relative_path | TEXT | 存储相对路径，形如 `raw/<user_id>/<YYYY>/<MM>/<sha256>.fit` |
+| content_hash | TEXT | 内容哈希，唯一约束，导入去重的依据 |
+| file_size | INTEGER | 字节数 |
+| file_format | TEXT | `fit` / `gpx` / `tcx` |
+| content_type | TEXT | `activity` / `workout`，读自文件内容，不用文件名判断 |
+| parser_version | TEXT | 解析器版本，支持按版本筛选需重解析的文件 |
+| parse_status | TEXT | `pending` / `parsing` / `parsed` / `failed` / `ignored` |
+| parse_error | TEXT | 失败原因 |
+| uploaded_at / parsed_at | TEXT | 上传与解析时间 |
+
+另建索引 `idx_files_user_uploaded (user_id, uploaded_at)`，供按用户按时间查台账。
+
+建库或重建：
+
+```bash
+cd feature-tests
+sqlite3 feature_test.db ".read schema.sql"
+```
+
+脚本用 `CREATE TABLE IF NOT EXISTS`，重复执行不会破坏已有数据；要彻底重建就先删掉 `feature_test.db` 再执行。
+
+三条使用约定：
+
+1. **外键约束需每个连接显式打开**：`PRAGMA foreign_keys = ON;`，SQLite 默认不启用，不打开则级联删除与 `user_id` 校验都不生效。
+2. **只存相对路径，不存绝对路径**，否则换机器即断链；磁盘上的原始文件按内容哈希命名。
+3. **内容哈希唯一约束是导入幂等的依据**，重复导入由数据库直接挡住，不在应用层判重。
+
+后续按 6.6 落地顺序增补：用户档案（阈值功率、体重、最大心率）、活动、每秒数据等表，本脚本随之下发新版本。
+
+## 六、运行与前置条件
 
 首次运行前需要确认的东西，在本节逐条列明（随实际落地补充）：
 
@@ -83,7 +149,7 @@ feature-tests/
 - 数据源位于 `devdata/`，路径通过参数传入。
 - 涉及大模型的用例需要可用的 API Key，一律从环境变量读取，不写入任何文件；无 Key 时对应用例标记为不可判定，不静默跳过。
 
-## 六、纪律
+## 七、纪律
 
 1. 一条功能没找到真值，就不算测过，也不允许在记录里写成通过。
 2. 用例失败先看是不是数据或口径问题（例如时长口径、清洗规则），确认后再改算法。

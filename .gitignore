@@ -1,0 +1,6 @@
+# 功能测试库：运行时写入用户名、口令哈希与个人文件路径，含个人数据
+# 可由 feature-tests/schema.sql 随时重建，因此不入仓库
+feature-tests/feature_test.db
+feature-tests/feature_test.db-journal
+feature-tests/feature_test.db-wal
+feature-tests/feature_test.db-shm
