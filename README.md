@@ -47,26 +47,15 @@
 | 2026-09-21 | 建立本工作目录 | 已完成 |
 | 2026-09-21 | 初始化本地仓库，提交 `first commit`（8f83539），本地分支 `main` | 已完成 |
 | 2026-09-21 | 关联远端并推送 Gitee：`origin` → https://gitee.com/tyvtjhj/cycling-visualization-and-llm.git | 已完成 |
-| 2026-09-21 | 关联远端 GitHub：`github` → https://github.com/tyvtjhj/Cycling-Visualization-and-LLM.git | 已配置，推送待办 |
+| 2026-09-21 | 关联远端 GitHub：`github` → https://github.com/tyvtjhj/Cycling-Visualization-and-LLM.git | 已完成（2026-10-19 首次推送） |
 | 2026-10-19 | 建立正式应用库初版：`storage/app.db`，按 6.6 落地顺序第一步建 `users` / `user_profiles` / `files` / `activities` 四张表，建表脚本 `backend/src/data_access/storage/schema.sql` | 已完成 |
+| 2026-10-19 | 推送提交 `48e30d2` 到 Gitee 与 GitHub，两远端 `main` 分支一致 | 已完成 |
 
-### 4.1 待办：GitHub 首次推送
+### 4.1 双远端同步
 
-原因：`github.com:443` 在当前网络下连接被重置，且本机未配置代理；`github.com:22` 与 `ssh.github.com:443` 可达，但 SSH 认证尚未就绪。
+| 远端 | 地址 | 用途 |
+|---|---|---|
+| `origin` | Gitee：https://gitee.com/tyvtjhj/cycling-visualization-and-llm.git | 日常默认推送 |
+| `github` | GitHub：https://github.com/tyvtjhj/Cycling-Visualization-and-LLM.git | 2026-10-19 完成首次推送 |
 
-恢复网络后在本目录执行任一方式：
-
-```bash
-# 方式一：HTTPS 直连
-git push github main
-
-# 方式二：本机有代理时（仅作用于本仓库）
-git config --local http.https://github.com.proxy http://127.0.0.1:<端口>
-git push github main
-
-# 方式三：已把 SSH 公钥加到 GitHub 账号时
-git remote set-url github git@github.com:tyvtjhj/Cycling-Visualization-and-LLM.git
-git push github main
-```
-
-日常推送用 `git push`（走 Gitee）；两个平台分支名统一为 `main`，避免本地出现 master/main 双分支各自漂移。
+日常推送用 `git push`（走 Gitee）；同步 GitHub 用 `git push github main`。两个平台分支名统一为 `main`，避免本地出现 master/main 双分支各自漂移。
