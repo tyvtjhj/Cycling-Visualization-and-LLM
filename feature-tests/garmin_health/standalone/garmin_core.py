@@ -111,6 +111,15 @@ def env_bool(name: str, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
+def configure_stdio() -> None:
+    """Windows 控制台默认 GBK，输出 emoji/中文可能抛 UnicodeEncodeError；统一切到 UTF-8。"""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError, OSError):
+            pass
+
+
 def credentials_path(path: Optional[str | Path] = None) -> Path:
     """解析账号文件路径：显式参数 > GARMIN_CONFIG > 脚本同目录 credentials.json。"""
     if path is not None:
@@ -896,6 +905,7 @@ def to_json(data: Any) -> str:
 
 
 def main(argv: Optional[list[str]] = None) -> int:
+    configure_stdio()
     parser = argparse.ArgumentParser(
         description="Garmin 数据查询核心（独立版）：--check 验证登录，--today 查看今日概览"
     )
@@ -925,6 +935,13 @@ def main(argv: Optional[list[str]] = None) -> int:
             data = client.today()
             print(to_json(data) if args.json else format_today(data))
             return 0
+    except GarminConnectTooManyRequestsError as exc:
+        print(
+            f"Garmin 登录/接口被限流（429）：{exc}\n"
+            "建议稍后重试、关闭代理或换网络、确认账号区域与 is_cn 是否匹配。",
+            file=sys.stderr,
+        )
+        return 3
     except (GarminConnectAuthenticationError, GarminConnectConnectionError) as exc:
         print(f"Garmin 访问失败：{exc}", file=sys.stderr)
         return 2

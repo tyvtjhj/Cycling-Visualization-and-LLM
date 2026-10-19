@@ -28,6 +28,7 @@ from garminconnect import (
 
 from garmin_core import (
     GarminClient,
+    configure_stdio,
     credentials_path,
     format_activities,
     format_heart_rate_days,
@@ -63,46 +64,79 @@ ACTIVITY_TYPES = (
 )
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="garmin_cli.py",
-        description="Garmin 数据查询 CLI（独立版，不依赖 AstrBot）。账号从环境变量读取。",
+def _global_options() -> argparse.ArgumentParser:
+    """全局参数：允许写在子命令前或后（子命令通过 parents 复用）。"""
+    parent = argparse.ArgumentParser(add_help=False)
+    parent.add_argument(
+        "--json",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="输出 JSON（便于脚本/看板消费）",
     )
-    parser.add_argument("--json", action="store_true", help="输出 JSON（便于脚本/看板消费）")
-    parser.add_argument(
+    parent.add_argument(
         "--config",
-        default=None,
+        default=argparse.SUPPRESS,
         help="测试账号 JSON 路径，默认脚本同目录 credentials.json（不入库）",
     )
-    parser.add_argument(
+    parent.add_argument(
         "--region",
         choices=("cn", "global"),
-        default=None,
-        help="账号区域：cn=中国区，global=国际区；默认读 GARMIN_IS_CN（默认中国区）",
+        default=argparse.SUPPRESS,
+        help="账号区域：cn=中国区，global=国际区；未指定时用账号文件的 is_cn",
     )
-    parser.add_argument("--tokenstore", default=None, help="tokenstore 路径，默认 ~/.garminconnect")
-    parser.add_argument("--retry", type=int, default=3, help="429/5xx 重试次数，默认 3")
-    parser.add_argument(
-        "--retry-wait", type=float, default=20.0, help="首次重试等待秒数，默认 20（指数退避）"
+    parent.add_argument(
+        "--tokenstore",
+        default=argparse.SUPPRESS,
+        help="tokenstore 路径；未指定时用账号文件配置或 ~/.garminconnect",
+    )
+    parent.add_argument(
+        "--retry", type=int, default=argparse.SUPPRESS, help="429/5xx 重试次数，默认 3"
+    )
+    parent.add_argument(
+        "--retry-wait",
+        type=float,
+        default=argparse.SUPPRESS,
+        help="首次重试等待秒数，默认 20（指数退避）",
+    )
+    return parent
+
+
+def build_parser() -> argparse.ArgumentParser:
+    global_opts = _global_options()
+    parser = argparse.ArgumentParser(
+        prog="garmin_cli.py",
+        description="Garmin 数据查询 CLI（独立版，不依赖 AstrBot）。账号从 credentials.json 读取。",
+        parents=[global_opts],
+    )
+    parser.set_defaults(
+        json=False,
+        config=None,
+        region=None,
+        tokenstore=None,
+        retry=3,
+        retry_wait=20.0,
     )
 
     sub = parser.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("check", help="验证登录并打印账号信息")
+    def add(name: str, help_text: str) -> argparse.ArgumentParser:
+        return sub.add_parser(name, help=help_text)
 
-    today = sub.add_parser("today", help="今日健康概览")
+    add("check", "验证登录并打印账号信息")
+
+    today = add("today", "今日健康概览")
     today.add_argument("--date", default=None, help="日期 YYYY-MM-DD，默认今天")
 
-    hr = sub.add_parser("hr", help="近 N 天心率")
+    hr = add("hr", "近 N 天心率")
     hr.add_argument("--days", type=int, default=7)
 
-    sleep = sub.add_parser("sleep", help="近 N 天睡眠")
+    sleep = add("sleep", "近 N 天睡眠")
     sleep.add_argument("--days", type=int, default=7)
 
-    steps = sub.add_parser("steps", help="近 N 天步数")
+    steps = add("steps", "近 N 天步数")
     steps.add_argument("--days", type=int, default=7)
 
-    activities = sub.add_parser("activities", help="活动列表（可按类型/日期/关键词筛选）")
+    activities = add("activities", "活动列表（可按类型/日期/关键词筛选）")
     activities.add_argument("--type", choices=ACTIVITY_TYPES, default=None, help="活动类型")
     activities.add_argument("--start", default=None, help="开始日期 YYYY-MM-DD / YYYY-MM / YYYY")
     activities.add_argument("--end", default=None, help="结束日期")
@@ -110,30 +144,56 @@ def build_parser() -> argparse.ArgumentParser:
     activities.add_argument("--limit", type=int, default=20, help="最多显示条数，默认 20")
     activities.add_argument("--scan-limit", type=int, default=2000, help="最多扫描的原始活动数")
 
-    volume = sub.add_parser("volume", help="运动量统计")
+    volume = add("volume", "运动量统计")
     volume.add_argument("--type", required=True, choices=ACTIVITY_TYPES)
     volume.add_argument("--start", default=None)
     volume.add_argument("--end", default=None)
     volume.add_argument("--scan-limit", type=int, default=3000)
 
-    pb = sub.add_parser("pb", help="个人最佳（距离/均速/爬升/时长）")
+    pb = add("pb", "个人最佳（距离/均速/爬升/时长）")
     pb.add_argument("--type", choices=ACTIVITY_TYPES, default=None)
     pb.add_argument("--scan-limit", type=int, default=3000)
 
-    yearly = sub.add_parser("yearly", help="年度报告")
+    yearly = add("yearly", "年度报告")
     yearly.add_argument("--year", type=int, default=datetime.now().year)
     yearly.add_argument("--scan-limit", type=int, default=3000)
 
-    report = sub.add_parser("report", help="综合报告（近 N 天均值 + 规则建议，不调用 LLM）")
+    report = add("report", "综合报告（近 N 天均值 + 规则建议，不调用 LLM）")
     report.add_argument("--days", type=int, default=7)
 
-    rename = sub.add_parser("rename", help="修改活动名称（写操作，必须 --yes）")
+    rename = add("rename", "修改活动名称（写操作，必须 --yes）")
     rename.add_argument("--activity-id", default=None, help="活动 ID")
     rename.add_argument("--keyword", default=None, help="按活动名关键词定位首条匹配")
     rename.add_argument("--name", required=True, help="新活动名")
     rename.add_argument("--yes", action="store_true", help="确认执行写操作")
 
     return parser
+
+
+def _normalize_argv(argv: list[str]) -> list[str]:
+    """把全局参数统一挪到子命令前，兼容 `today --json` 与 `--json today`。"""
+    flags = {"--json"}
+    value_opts = {"--config", "--region", "--tokenstore", "--retry", "--retry-wait"}
+    head: list[str] = []
+    rest: list[str] = []
+    index = 0
+    while index < len(argv):
+        token = argv[index]
+        name = token.split("=", 1)[0]
+        if name in flags:
+            head.append(token)
+            index += 1
+        elif name in value_opts:
+            head.append(token)
+            if "=" not in token and index + 1 < len(argv):
+                head.append(argv[index + 1])
+                index += 2
+            else:
+                index += 1
+        else:
+            rest.append(token)
+            index += 1
+    return head + rest
 
 
 def _make_client(args: argparse.Namespace) -> tuple[GarminClient, str]:
@@ -255,7 +315,9 @@ def run(args: argparse.Namespace) -> int:
 
 
 def main(argv: Optional[list[str]] = None) -> int:
-    args = build_parser().parse_args(argv)
+    configure_stdio()
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+    args = build_parser().parse_args(_normalize_argv(raw_argv))
     try:
         return run(args)
     except SystemExit as exc:  # core 在缺少账号时会 raise SystemExit(message)
@@ -269,7 +331,11 @@ def main(argv: Optional[list[str]] = None) -> int:
         print(f"❌ Garmin 登录失败：{exc}", file=sys.stderr)
         return 2
     except GarminConnectTooManyRequestsError as exc:
-        print(f"❌ Garmin 限流：{exc}；请降低频率后重试", file=sys.stderr)
+        print(
+            f"❌ Garmin 登录/接口被限流（429）：{exc}\n"
+            "建议：稍后重试、关闭代理或换网络、确认账号区域与 is_cn 是否匹配。",
+            file=sys.stderr,
+        )
         return 3
     except GarminConnectConnectionError as exc:
         print(f"❌ Garmin 访问失败：{exc}", file=sys.stderr)

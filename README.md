@@ -54,6 +54,7 @@
 | 2026-10-19 | 建立 `feature-tests/garmin_health/` 第三方参考源码评估目录：固定 commit `9f2655cf` 下载核心源码并拆分 42 个顶层符号；因源仓库无 LICENSE，`vendor/` 仅本地留存、不入库 | 已完成 |
 | 2026-10-19 | 新增 `feature-tests/garmin_health/standalone/` 独立运行版：`garmin_core.py` + `garmin_cli.py`，无 AstrBot/Agent 依赖，可单独查询健康、活动、统计与报告 | 已完成 |
 | 2026-10-19 | standalone 增加本地测试账号 `credentials.json`（已 gitignore，含隐私不入库），程序改为从 JSON 读取；README 注明该文件必需及填写格式与方法 | 已完成 |
+| 2026-10-19 | standalone 实测通过：Garmin 登录与 today/hr/sleep/steps/activities/volume/report 查询正常；修复 Windows 控制台编码、429 提示与全局参数位置兼容 | 已完成 |
 
 ### 4.1 双远端同步
 

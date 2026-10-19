@@ -73,6 +73,8 @@ feature-tests/garmin_health/standalone/credentials.json
 - 文件不存在或 `email`/`password` 为空：程序会打印缺少账号文件的提示并**以退出码 2 结束**，不会发起登录；
 - 密码错误：Garmin 认证失败，同样以退出码 2 结束；
 - MFA 账号：交互终端会提示输入验证码，非交互环境会失败并给出提示；
+- 首次登录可能先出现 mobile SSO `429` 警告（Garmin 风控，不一定只是 IP）；库会自动尝试其他登录策略，成功即可。若所有策略都 429，稍后重试或换网络；
+- `tokenstore` 目录必须可写。若不可写（例如受限环境），登录仍可能成功但会话不会保存，后续命令会重新登录并更容易触发 429；此时把 `tokenstore` 指到可写目录（项目内可用 `tmp/garmin_tokenstore`）；
 - 账号文件只用于本地测试：`vendor/`、`credentials.json` 等含隐私或第三方源码的内容都不会入库。
 
 ### 3.5 安全提醒
@@ -116,11 +118,12 @@ $CLI report --days 7
 
 `--type` 支持父类型（`running` / `cycling` / `hiking` / `walking` / `swimming` / `multi_sport` / `fitness_equipment` / `other`）和常见子类型（如 `road_biking`、`mountain_biking`、`gravel_cycling`、`trail_running`、`lap_swimming`）。父类型交给 Garmin API 过滤，子类型在本地按 `typeKey` 精确匹配。
 
-全局参数：`--json`（机器可读）、`--config`（账号 JSON 路径）、`--region cn|global`、`--tokenstore`、`--retry`、`--retry-wait`。全局参数要写在子命令**之前**，例如：
+全局参数：`--json`（机器可读）、`--config`（账号 JSON 路径）、`--region cn|global`、`--tokenstore`、`--retry`、`--retry-wait`。写在子命令**前或后**都可以，程序会自动归一化：
 
 ```bash
 $CLI --config /path/to/credentials.json check
 $CLI --json --region cn today
+$CLI today --json          # 与上一行等价
 ```
 
 ## 五、JSON 输出
