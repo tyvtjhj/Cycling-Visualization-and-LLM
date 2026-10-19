@@ -20,6 +20,7 @@ feature-tests/garmin_health/
 ├─ .gitignore          排除 /vendor/（入库）
 ├─ fetch_source.py     按固定 commit 重新下载源码到 vendor/raw（入库，仅标准库）
 ├─ inventory.md        核心功能清单与拆分归类表（入库）
+├─ standalone/         独立运行版：garmin_core.py + garmin_cli.py（无 AstrBot 依赖，入库）
 └─ vendor/             第三方源码，本地生成、不入库
    ├─ raw/             按 commit 下载的完整原始文件 + COMMIT.txt
    ├─ MANIFEST.sha256  原始文件 sha256 与字节数
@@ -72,3 +73,15 @@ python feature-tests/garmin_health/fetch_source.py
 - 依赖：`garminconnect>=0.3.4`（非官方 Garmin Connect Web 客户端）、`astrbot` 插件运行时；本项目 backend 不安装这些依赖。
 - 风险：账号密码需交给插件配置；MFA 首次登录没有输入入口；非官方接口可能被限流/风控/改版；Token 文件落盘；活动列表大量分页请求。
 - 结论：只适合做**本地评估与对拍参考**，不作为交付系统数据来源。
+
+## 六、独立运行版（standalone）
+
+`standalone/` 把核心能力独立实现为不依赖 AstrBot / Agent 的脚本（**不是**第三方源码复制）：
+
+| 文件 | 说明 |
+|---|---|
+| `standalone/garmin_core.py` | 登录/会话、健康数据、活动、统计、报告、可选改名 |
+| `standalone/garmin_cli.py` | 命令行入口（`--json` 输出、429 退避） |
+| `standalone/README.md` | 环境、环境变量、命令示例、口径与风险 |
+
+运行方式、依赖与口径见 [standalone/README.md](standalone/README.md)。注意它仍是开发期评估工具，按 PROJECT_CONTEXT 3.1 不进入交付系统。
