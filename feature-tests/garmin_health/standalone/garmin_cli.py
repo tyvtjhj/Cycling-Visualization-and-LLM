@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Garmin 数据查询 CLI（独立版，无 AstrBot / Agent 依赖）。
 
-运行前设置环境变量：
-    GARMIN_EMAIL / GARMIN_PASSWORD / GARMIN_IS_CN(默认1) / GARMIN_TOKENSTORE(可选)
+测试账号默认读取同目录 credentials.json（含隐私，已 gitignore，不会入库）；
+也可用 --config 指定其他路径或 GARMIN_CONFIG 环境变量。格式见同目录 README.md。
 
 示例：
     uv run --no-project --python 3.12 --with "garminconnect>=0.3.4" \
@@ -28,6 +28,7 @@ from garminconnect import (
 
 from garmin_core import (
     GarminClient,
+    credentials_path,
     format_activities,
     format_heart_rate_days,
     format_personal_best,
@@ -37,6 +38,7 @@ from garmin_core import (
     format_today,
     format_volume,
     format_yearly,
+    load_credentials,
     to_json,
 )
 
@@ -67,6 +69,11 @@ def build_parser() -> argparse.ArgumentParser:
         description="Garmin 数据查询 CLI（独立版，不依赖 AstrBot）。账号从环境变量读取。",
     )
     parser.add_argument("--json", action="store_true", help="输出 JSON（便于脚本/看板消费）")
+    parser.add_argument(
+        "--config",
+        default=None,
+        help="测试账号 JSON 路径，默认脚本同目录 credentials.json（不入库）",
+    )
     parser.add_argument(
         "--region",
         choices=("cn", "global"),
@@ -129,16 +136,19 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _make_client(args: argparse.Namespace) -> GarminClient:
-    is_cn: Optional[bool] = None
-    if args.region is not None:
-        is_cn = args.region == "cn"
-    return GarminClient(
+def _make_client(args: argparse.Namespace) -> tuple[GarminClient, str]:
+    cfg_file = credentials_path(args.config)
+    cfg = load_credentials(cfg_file)
+    is_cn = (args.region == "cn") if args.region is not None else cfg["is_cn"]
+    client = GarminClient(
+        email=cfg["email"],
+        password=cfg["password"],
         is_cn=is_cn,
-        tokenstore=args.tokenstore,
+        tokenstore=args.tokenstore or cfg["tokenstore"],
         retry=args.retry,
         retry_wait=args.retry_wait,
     )
+    return client, str(cfg_file)
 
 
 def _emit(args: argparse.Namespace, data: Any, text: str) -> None:
@@ -146,7 +156,7 @@ def _emit(args: argparse.Namespace, data: Any, text: str) -> None:
 
 
 def run(args: argparse.Namespace) -> int:
-    client = _make_client(args)
+    client, config_file = _make_client(args)
     command = args.command
 
     if command == "check":
@@ -154,11 +164,15 @@ def run(args: argparse.Namespace) -> int:
             "account": client.account_name(),
             "is_cn": client.is_cn,
             "tokenstore": client.tokenstore,
+            "credentials": config_file,
         }
         print(
             to_json(info)
             if args.json
-            else f"✅ 登录成功：{info['account']}（中国区={info['is_cn']}，tokenstore={info['tokenstore']}）"
+            else (
+                f"✅ 登录成功：{info['account']}（中国区={info['is_cn']}，"
+                f"tokenstore={info['tokenstore']}，账号文件={info['credentials']}）"
+            )
         )
         return 0
 

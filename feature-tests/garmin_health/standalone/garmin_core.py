@@ -9,11 +9,12 @@
 - 报告：汇总 + 规则建议（不调用任何 LLM）
 - 可选写操作：活动改名（必须显式 --yes）
 
-环境变量：
-    GARMIN_EMAIL      Garmin 账号邮箱
-    GARMIN_PASSWORD   Garmin 账号密码
-    GARMIN_IS_CN      1=中国区（默认），0=国际区
-    GARMIN_TOKENSTORE tokenstore 目录/文件，默认 ~/.garminconnect
+测试账号：
+    默认读取同目录 credentials.json（已被 .gitignore 排除，不会入库）：
+        {"email": "...", "password": "...", "is_cn": true, "tokenstore": "~/.garminconnect"}
+    可用 --config 指定其他路径，或用 GARMIN_CONFIG 环境变量。
+    直接 import GarminClient() 时也支持 GARMIN_EMAIL / GARMIN_PASSWORD /
+    GARMIN_IS_CN / GARMIN_TOKENSTORE 环境变量作为兜底。
 
 运行依赖：Python 3.12+ 与 garminconnect>=0.3.4。可用 uv 临时环境运行：
     uv run --no-project --python 3.12 --with "garminconnect>=0.3.4" \
@@ -50,6 +51,9 @@ T = TypeVar("T")
 DEFAULT_TOKENSTORE = os.environ.get(
     "GARMIN_TOKENSTORE", str(Path.home() / ".garminconnect")
 )
+
+# 测试账号文件：默认放在脚本同目录，已由同目录 .gitignore 排除
+DEFAULT_CREDENTIALS = Path(__file__).resolve().parent / "credentials.json"
 
 # Garmin 活动列表接口只接受父类型；子类型在本地按 typeKey 精确过滤。
 PARENT_TYPES = (
@@ -105,6 +109,61 @@ def env_bool(name: str, default: bool = False) -> bool:
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def credentials_path(path: Optional[str | Path] = None) -> Path:
+    """解析账号文件路径：显式参数 > GARMIN_CONFIG > 脚本同目录 credentials.json。"""
+    if path is not None:
+        return Path(path).expanduser()
+    env_path = os.environ.get("GARMIN_CONFIG")
+    if env_path:
+        return Path(env_path).expanduser()
+    return DEFAULT_CREDENTIALS
+
+
+def load_credentials(path: Optional[str | Path] = None) -> dict[str, Any]:
+    """读取并校验测试账号 JSON。
+
+    文件不入库（同目录 .gitignore 已排除）。字段：
+        email      string  必填，Garmin 登录账号（邮箱；国服用手机号登录也可填手机号）
+        password   string  必填
+        is_cn      bool    可选，默认 true（中国区）
+        tokenstore string  可选，默认 ~/.garminconnect
+    """
+    cfg_file = Path(path).expanduser() if path is not None else credentials_path()
+    if not cfg_file.exists():
+        raise SystemExit(
+            f"缺少测试账号文件：{cfg_file}\n"
+            "请按 feature-tests/garmin_health/standalone/README.md 的格式填写；"
+            "该文件含隐私，已被 .gitignore 排除，不会入库。"
+        )
+    try:
+        data = json.loads(cfg_file.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SystemExit(f"账号文件读取失败：{cfg_file}（{exc}）") from exc
+    if not isinstance(data, dict):
+        raise SystemExit(f"账号文件格式错误：{cfg_file} 顶层必须是 JSON 对象")
+
+    email = data.get("email") or data.get("username")
+    password = data.get("password")
+    if not isinstance(email, str) or not email.strip():
+        raise SystemExit(f"账号文件 {cfg_file} 缺少有效的 email（Garmin 登录账号）")
+    if not isinstance(password, str) or not password:
+        raise SystemExit(f"账号文件 {cfg_file} 缺少有效的 password")
+
+    is_cn = data.get("is_cn", True)
+    if not isinstance(is_cn, bool):
+        raise SystemExit(f"账号文件 {cfg_file} 的 is_cn 必须是 true/false")
+    tokenstore = data.get("tokenstore")
+    if tokenstore is not None and not isinstance(tokenstore, str):
+        raise SystemExit(f"账号文件 {cfg_file} 的 tokenstore 必须是字符串")
+
+    return {
+        "email": email.strip(),
+        "password": password,
+        "is_cn": is_cn,
+        "tokenstore": tokenstore or None,
+    }
 
 
 def today_str() -> str:
@@ -843,10 +902,21 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--check", action="store_true", help="验证登录并打印账号信息")
     parser.add_argument("--today", action="store_true", help="打印今日健康概览")
     parser.add_argument("--json", action="store_true", help="以 JSON 输出")
+    parser.add_argument(
+        "--config",
+        default=None,
+        help="账号 JSON 路径，默认脚本同目录 credentials.json",
+    )
     args = parser.parse_args(argv)
 
     try:
-        client = GarminClient()
+        cfg = load_credentials(args.config)
+        client = GarminClient(
+            email=cfg["email"],
+            password=cfg["password"],
+            is_cn=cfg["is_cn"],
+            tokenstore=cfg["tokenstore"],
+        )
         if args.check:
             info = {"account": client.account_name(), "is_cn": client.is_cn, "tokenstore": client.tokenstore}
             print(to_json(info) if args.json else f"登录成功：{info['account']}（国服={info['is_cn']}，tokenstore={info['tokenstore']}）")

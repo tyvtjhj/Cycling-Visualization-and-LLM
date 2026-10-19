@@ -28,26 +28,58 @@ uv run --no-project --python 3.12 --with "garminconnect>=0.3.4" \
     python feature-tests/garmin_health/standalone/garmin_cli.py --help
 ```
 
-## 三、账号与区域（环境变量）
+> 运行前必须先按第三节填写 `credentials.json`；未填写时 `check`/查询命令会直接报错并以退出码 2 结束。`--help` 不读取凭证。
 
-| 变量 | 必填 | 说明 |
-|---|---|---|
-| `GARMIN_EMAIL` | 是（首次） | Garmin 账号邮箱 |
-| `GARMIN_PASSWORD` | 是（首次） | Garmin 账号密码；不要写入文件或提交仓库 |
-| `GARMIN_IS_CN` | 否 | `1`=中国区（默认），`0`=国际区 |
-| `GARMIN_TOKENSTORE` | 否 | tokenstore 路径，默认 `~/.garminconnect`；登录成功后自动复用 |
+## 三、测试账号文件（必需，不入库）
 
-PowerShell 示例：
+程序启动时读取**同目录下的 `credentials.json`**。该文件含个人隐私，已被同目录 `.gitignore` 排除，**不会进入 git 提交**。
 
-```powershell
-$env:GARMIN_EMAIL = "you@example.com"
-$env:GARMIN_PASSWORD = "******"
-$env:GARMIN_IS_CN = "1"
+### 3.1 文件位置
+
+```
+feature-tests/garmin_health/standalone/credentials.json
 ```
 
-- 首次登录会向 tokenstore 写会话文件；之后可不再提供密码（删除 tokenstore 即退出登录）。
-- 开启 MFA 的账号：交互终端会提示输入验证码；非交互环境会失败并给出提示。
-- 账号密码只用于首次换取 token，之后请求使用 token；仍请只在个人机器上使用。
+仓库里已创建好空模板，直接用编辑器填入账号即可。也可用 `--config 路径` 或环境变量 `GARMIN_CONFIG` 指定其他位置。
+
+### 3.2 填写格式
+
+```json
+{
+  "email": "你的 Garmin 登录账号",
+  "password": "你的 Garmin 密码",
+  "is_cn": true,
+  "tokenstore": "~/.garminconnect"
+}
+```
+
+| 字段 | 必填 | 说明 |
+|---|---|---|
+| `email` | 是 | Garmin 登录账号（邮箱；国服账号若用手机号登录，也可填手机号）。也兼容字段名 `username` |
+| `password` | 是 | Garmin 登录密码；仅本机保存，勿提交 |
+| `is_cn` | 否 | `true`=中国区（默认），`false`=国际区 |
+| `tokenstore` | 否 | 会话 token 保存路径，默认 `~/.garminconnect`；首次登录成功后自动复用 |
+
+### 3.3 填写步骤
+
+1. 用编辑器打开 `feature-tests/garmin_health/standalone/credentials.json`；
+2. 把 `email`、`password` 换成你的测试账号；国服保持 `is_cn: true`，国际区改 `false`；
+3. 保持 JSON 合法（字段用双引号、逗号分隔，末尾不要多逗号）；
+4. **不要** `git add` / 提交该文件（已在 `.gitignore` 中，`git status` 不应出现它）；
+5. 首次运行会写 tokenstore，之后可复用会话；删除 tokenstore 即退出登录。
+
+### 3.4 缺少文件或字段的后果
+
+- 文件不存在或 `email`/`password` 为空：程序会打印缺少账号文件的提示并**以退出码 2 结束**，不会发起登录；
+- 密码错误：Garmin 认证失败，同样以退出码 2 结束；
+- MFA 账号：交互终端会提示输入验证码，非交互环境会失败并给出提示；
+- 账号文件只用于本地测试：`vendor/`、`credentials.json` 等含隐私或第三方源码的内容都不会入库。
+
+### 3.5 安全提醒
+
+- `credentials.json` 含**明文密码**，只放在本机该目录；不要把内容粘贴到聊天、截图或提交记录里；
+- 如文件被误拷贝到别处，请同样按隐私数据处理，必要时修改 Garmin 密码并撤销会话；
+- 通过 Python 直接 `import garmin_core` 调用 `GarminClient()` 时，仍可用 `GARMIN_EMAIL` / `GARMIN_PASSWORD` / `GARMIN_IS_CN` / `GARMIN_TOKENSTORE` 环境变量兜底；命令行（CLI）固定读取上面的 JSON 文件。
 
 ## 四、命令
 
@@ -84,7 +116,12 @@ $CLI report --days 7
 
 `--type` 支持父类型（`running` / `cycling` / `hiking` / `walking` / `swimming` / `multi_sport` / `fitness_equipment` / `other`）和常见子类型（如 `road_biking`、`mountain_biking`、`gravel_cycling`、`trail_running`、`lap_swimming`）。父类型交给 Garmin API 过滤，子类型在本地按 `typeKey` 精确匹配。
 
-全局参数：`--json`（机器可读）、`--region cn|global`、`--tokenstore`、`--retry`、`--retry-wait`。
+全局参数：`--json`（机器可读）、`--config`（账号 JSON 路径）、`--region cn|global`、`--tokenstore`、`--retry`、`--retry-wait`。全局参数要写在子命令**之前**，例如：
+
+```bash
+$CLI --config /path/to/credentials.json check
+$CLI --json --region cn today
+```
 
 ## 五、JSON 输出
 
@@ -120,6 +157,8 @@ $CLI today --json
 |---|---|
 | `garmin_core.py` | 核心库：登录/会话、健康数据、活动、统计、报告、可选改名；也可 `python garmin_core.py --check/--today` 最小自检 |
 | `garmin_cli.py` | 命令行入口（子命令 + `--json`） |
+| `credentials.json` | **本地测试账号（不入库）**；运行前必须填写，格式见第三节 |
+| `.gitignore` | 排除 `credentials.json`，防止隐私文件入库 |
 | `README.md` | 本文件 |
 
 纯函数（`fmt_duration`、`speed_to_pace`、`normalize_date_range`、`_rule_tips` 等）不依赖网络，可直接导入单测。

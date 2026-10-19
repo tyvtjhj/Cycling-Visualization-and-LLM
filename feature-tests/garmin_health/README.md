@@ -84,4 +84,4 @@ python feature-tests/garmin_health/fetch_source.py
 | `standalone/garmin_cli.py` | 命令行入口（`--json` 输出、429 退避） |
 | `standalone/README.md` | 环境、环境变量、命令示例、口径与风险 |
 
-运行方式、依赖与口径见 [standalone/README.md](standalone/README.md)。注意它仍是开发期评估工具，按 PROJECT_CONTEXT 3.1 不进入交付系统。
+首次运行前需按 [standalone/README.md](standalone/README.md) 填写 `standalone/credentials.json`（本地隐私文件，已 gitignore，不入库）。注意它仍是开发期评估工具，按 PROJECT_CONTEXT 3.1 不进入交付系统。
