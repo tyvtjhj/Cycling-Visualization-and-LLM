@@ -51,6 +51,7 @@
 | 2026-10-19 | 建立正式应用库初版：`storage/app.db`，按 6.6 落地顺序第一步建 `users` / `user_profiles` / `files` / `activities` 四张表，建表脚本 `backend/src/data_access/storage/schema.sql` | 已完成 |
 | 2026-10-19 | 推送提交 `48e30d2` 到 Gitee 与 GitHub，两远端 `main` 分支一致 | 已完成 |
 | 2026-10-19 | 搭建 backend uv 开发环境（Python 3.12.12，SQLAlchemy 2.1.5 + pytest 9.1.1），三层目录与测试骨架按 6.2 落地 | 已完成 |
+| 2026-10-19 | 建立 `feature-tests/garmin_health/` 第三方参考源码评估目录：固定 commit `9f2655cf` 下载核心源码并拆分 42 个顶层符号；因源仓库无 LICENSE，`vendor/` 仅本地留存、不入库 | 已完成 |
 
 ### 4.1 双远端同步
 

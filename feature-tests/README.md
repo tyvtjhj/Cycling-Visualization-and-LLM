@@ -155,3 +155,12 @@ sqlite3 feature_test.db ".read schema.sql"
 2. 用例失败先看是不是数据或口径问题（例如时长口径、清洗规则），确认后再改算法。
 3. 判据一旦定下不要为了让用例变绿而放宽。要改容差，先说明理由并更新 `cases.md`。
 4. 涉及项目级决策的改动（表结构、层间依赖、目录结构），先改 `PROJECT_CONTEXT.md`，再改本目录的脚本。
+
+## 八、外部参考源码（例外）
+
+`garmin_health/` 不是功能测试用例，而是**第三方 AstrBot 插件源码的本地评估目录**：
+
+- 用途：阅读、对照与评估佳明数据访问链路，供批次 2 对拍参考；不进入交付系统，交付系统仍按 PROJECT_CONTEXT 3.1 只导入平台导出文件。
+- 来源：`Jonathan-614/astrbot_plugin_garmin_health`，固定 commit `9f2655cf5f6378651f6e25f3a517fb8eb61f90aa`（v1.0.3）；源仓库**无 LICENSE**。
+- 入库状态：`vendor/` 由该目录 `.gitignore` 排除，**第三方源码不入库**；入库的只有说明、功能清单与下载脚本。
+- 重新获取：`python feature-tests/garmin_health/fetch_source.py`。
