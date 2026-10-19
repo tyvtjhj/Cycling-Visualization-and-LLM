@@ -48,6 +48,7 @@
 | 2026-09-21 | 初始化本地仓库，提交 `first commit`（8f83539），本地分支 `main` | 已完成 |
 | 2026-09-21 | 关联远端并推送 Gitee：`origin` → https://gitee.com/tyvtjhj/cycling-visualization-and-llm.git | 已完成 |
 | 2026-09-21 | 关联远端 GitHub：`github` → https://github.com/tyvtjhj/Cycling-Visualization-and-LLM.git | 已配置，推送待办 |
+| 2026-10-19 | 建立正式应用库初版：`storage/app.db`，按 6.6 落地顺序第一步建 `users` / `user_profiles` / `files` / `activities` 四张表，建表脚本 `backend/src/data_access/storage/schema.sql` | 已完成 |
 
 ### 4.1 待办：GitHub 首次推送
 

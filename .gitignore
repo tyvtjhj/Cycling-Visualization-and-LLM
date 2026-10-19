@@ -4,3 +4,23 @@ feature-tests/feature_test.db
 feature-tests/feature_test.db-journal
 feature-tests/feature_test.db-wal
 feature-tests/feature_test.db-shm
+
+# 项目文档 6.4 / 6.7：开发期数据源、临时产物与原始文件不入仓库
+# devdata/ 含个人骑行数据与同步索引库；tmp/ 为一次性探针脚本与中间产物
+# 只用 / 前缀锚定项目根目录，避免误伤 backend/src/.../storage/ 这类嵌套目录
+/devdata/
+/tmp/
+
+# 正式应用运行时数据（6.7）：SQLite 库与原始文件，可由建表脚本重建，不入仓库
+/storage/
+
+# 通用隐私与环境文件：密钥、虚拟环境、缓存一律不入仓库
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
