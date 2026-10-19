@@ -1,0 +1,21 @@
+[project]
+name = "ride-tracker-backend"
+version = "0.1.0"
+description = "基于大模型的骑行功率训练系统 · 后端"
+requires-python = ">=3.12"
+dependencies = [
+    "sqlalchemy>=2.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

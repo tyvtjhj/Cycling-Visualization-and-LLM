@@ -24,3 +24,6 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# 本机 uv 缓存与受管 Python（沙箱内工作区本地化，不入仓库）
+/.uv/
