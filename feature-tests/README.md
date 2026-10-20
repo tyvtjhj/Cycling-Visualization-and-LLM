@@ -171,4 +171,5 @@ sqlite3 feature_test.db ".read schema.sql"
 
 - 隐私：`.fit` / `.zip` 由该目录 `.gitignore` 排除，含 GPS 与心率等个人数据，**不进入仓库**；
 - 用途：运行 `feature-tests/garmin_health/standalone/analyze_fit.py` 做数据质量检查与指标复算，样本可随时删除；
+- 预处理：`数据分析/preprocess.py` 当前只做 FIT 原始内容盘点（消息统计、字段清单、记录样例），暂不做清洗/重采样；
 - 获取方式与分析命令见 `数据分析/README.md`。

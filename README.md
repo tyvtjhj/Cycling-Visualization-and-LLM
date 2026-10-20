@@ -58,6 +58,7 @@
 | 2026-10-20 | 测试通过 activity id 下载原始 ZIP（含 FIT）；新增 standalone 下载脚本 `garmin_download.py` 与测试说明 `DOWNLOAD_ORIGINAL.md`，并验证工具库文件索引回写 | 已完成 |
 | 2026-10-20 | 新增 `feature-tests/garmin_health/SYNC_DB.md`：记录开发期镜像库 v1→v3 结构变更、709 条活动同步校验与下载索引 | 已完成 |
 | 2026-10-20 | 新建 `feature-tests/数据分析/` 本地 FIT 样本目录（`.fit`/`.zip` 已 gitignore）；新增 `analyze_fit.py` 并完成第二阶段首轮数据分析 | 已完成 |
+| 2026-10-20 | 新增 `feature-tests/数据分析/preprocess.py`：FIT 原始内容盘点脚本（消息统计/字段清单/记录样例，暂不做预处理） | 已完成 |
 
 ### 4.1 双远端同步
 
