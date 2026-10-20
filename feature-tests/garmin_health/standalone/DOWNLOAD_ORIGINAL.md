@@ -76,6 +76,8 @@ https://connectus.garmin.cn/gc-api/download-service/files/activity/{activity_id}
 
 同时把对应行的 `download_status` 置为 `downloaded`，写入 `downloaded_at`；批量下载时其余活动保持 `pending`。
 
+完整的 v1 → v3 结构变更、56 列清单、709 条同步校验结果见 [../SYNC_DB.md](../SYNC_DB.md)。
+
 ## 六、脚本用法
 
 脚本：[garmin_download.py](garmin_download.py)（独立版，无 AstrBot 依赖）

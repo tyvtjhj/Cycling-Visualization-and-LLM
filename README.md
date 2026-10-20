@@ -56,6 +56,7 @@
 | 2026-10-19 | standalone 增加本地测试账号 `credentials.json`（已 gitignore，含隐私不入库），程序改为从 JSON 读取；README 注明该文件必需及填写格式与方法 | 已完成 |
 | 2026-10-19 | standalone 实测通过：Garmin 登录与 today/hr/sleep/steps/activities/volume/report 查询正常；修复 Windows 控制台编码、429 提示与全局参数位置兼容 | 已完成 |
 | 2026-10-20 | 测试通过 activity id 下载原始 ZIP（含 FIT）；新增 standalone 下载脚本 `garmin_download.py` 与测试说明 `DOWNLOAD_ORIGINAL.md`，并验证工具库文件索引回写 | 已完成 |
+| 2026-10-20 | 新增 `feature-tests/garmin_health/SYNC_DB.md`：记录开发期镜像库 v1→v3 结构变更、709 条活动同步校验与下载索引 | 已完成 |
 
 ### 4.1 双远端同步
 

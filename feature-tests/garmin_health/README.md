@@ -20,7 +20,8 @@ feature-tests/garmin_health/
 ├─ .gitignore          排除 /vendor/（入库）
 ├─ fetch_source.py     按固定 commit 重新下载源码到 vendor/raw（入库，仅标准库）
 ├─ inventory.md        核心功能清单与拆分归类表（入库）
-├─ standalone/         独立运行版：garmin_core.py + garmin_cli.py（无 AstrBot 依赖，入库）
+├─ SYNC_DB.md          开发期活动镜像库结构与变更记录（入库）
+├─ standalone/         独立运行版：garmin_core.py / garmin_cli.py / garmin_download.py（无 AstrBot 依赖，入库）
 └─ vendor/             第三方源码，本地生成、不入库
    ├─ raw/             按 commit 下载的完整原始文件 + COMMIT.txt
    ├─ MANIFEST.sha256  原始文件 sha256 与字节数
