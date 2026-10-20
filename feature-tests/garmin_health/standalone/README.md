@@ -126,6 +126,16 @@ $CLI --json --region cn today
 $CLI today --json          # 与上一行等价
 ```
 
+### 4.1 下载原始 ZIP / FIT
+
+```bash
+# 默认下载账号最新 1 条活动；批量时用 --all-pending --limit N
+uv run --no-project --python 3.12 --with "garminconnect>=0.3.4" \
+  python feature-tests/garmin_health/standalone/garmin_download.py --limit 1
+```
+
+说明、参数与批量建议见 [DOWNLOAD_ORIGINAL.md](DOWNLOAD_ORIGINAL.md)。
+
 ## 五、JSON 输出
 
 加 `--json` 输出结构化数据，便于接到看板或对拍脚本，例如：
@@ -149,7 +159,7 @@ $CLI today --json
 ## 七、风险与边界
 
 1. **非官方接口**：`garminconnect` 是社区实现；Garmin 改版、风控、限流都可能导致失败。
-2. **凭证安全**：账号密码只从环境变量读取，不写入任何文件；tokenstore 内有会话 token，注意本机权限。
+2. **凭证安全**：账号密码只从本地 `credentials.json` 读取（已 gitignore），不写入其他文件；tokenstore 内有会话 token，注意本机权限。
 3. **交付边界**：按 PROJECT_CONTEXT 3.1，本目录只用于开发期评估与对拍参考，**不进入交付系统**；正式系统仍只导入 FIT/GPX/TCX。
 4. **版权边界**：`../vendor/` 的第三方源码无 LICENSE，不得复制进本目录或再分发；本目录是独立实现。
 5. **写操作**：`rename` 会修改 Garmin 云端数据，默认拒绝执行，必须显式 `--yes`。
@@ -160,6 +170,8 @@ $CLI today --json
 |---|---|
 | `garmin_core.py` | 核心库：登录/会话、健康数据、活动、统计、报告、可选改名；也可 `python garmin_core.py --check/--today` 最小自检 |
 | `garmin_cli.py` | 命令行入口（子命令 + `--json`） |
+| `garmin_download.py` | 通过 activity id 下载原始 ZIP、解压 FIT 并回写开发期工具库 |
+| `DOWNLOAD_ORIGINAL.md` | 原始 ZIP 下载的测试结论、用法、批量建议与隐私说明 |
 | `credentials.json` | **本地测试账号（不入库）**；运行前必须填写，格式见第三节 |
 | `.gitignore` | 排除 `credentials.json`，防止隐私文件入库 |
 | `README.md` | 本文件 |
