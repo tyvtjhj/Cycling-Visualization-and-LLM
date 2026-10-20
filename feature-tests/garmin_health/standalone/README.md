@@ -136,6 +136,17 @@ uv run --no-project --python 3.12 --with "garminconnect>=0.3.4" \
 
 说明、参数与批量建议见 [DOWNLOAD_ORIGINAL.md](DOWNLOAD_ORIGINAL.md)。
 
+### 4.2 FIT 数据分析（第二阶段）
+
+```bash
+uv run --no-project --python 3.12 --with fitdecode \
+  python feature-tests/garmin_health/standalone/analyze_fit.py \
+  --fit "feature-tests/数据分析/<activity_id>.fit" \
+  --activity-id <activity_id>
+```
+
+输出 Markdown/JSON 到 `devdata/garmin/analysis/`（本地，含个人数据，不入库）。
+
 ## 五、JSON 输出
 
 加 `--json` 输出结构化数据，便于接到看板或对拍脚本，例如：
@@ -171,6 +182,7 @@ $CLI today --json
 | `garmin_core.py` | 核心库：登录/会话、健康数据、活动、统计、报告、可选改名；也可 `python garmin_core.py --check/--today` 最小自检 |
 | `garmin_cli.py` | 命令行入口（子命令 + `--json`） |
 | `garmin_download.py` | 通过 activity id 下载原始 ZIP、解压 FIT 并回写开发期工具库 |
+| `analyze_fit.py` | 第二阶段数据分析：解析 FIT，输出数据质量、指标复算与对拍报告 |
 | `DOWNLOAD_ORIGINAL.md` | 原始 ZIP 下载的测试结论、用法、批量建议与隐私说明 |
 | `credentials.json` | **本地测试账号（不入库）**；运行前必须填写，格式见第三节 |
 | `.gitignore` | 排除 `credentials.json`，防止隐私文件入库 |

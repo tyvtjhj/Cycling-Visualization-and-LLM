@@ -164,3 +164,11 @@ sqlite3 feature_test.db ".read schema.sql"
 - 来源：`Jonathan-614/astrbot_plugin_garmin_health`，固定 commit `9f2655cf5f6378651f6e25f3a517fb8eb61f90aa`（v1.0.3）；源仓库**无 LICENSE**。
 - 入库状态：`vendor/` 由该目录 `.gitignore` 排除，**第三方源码不入库**；入库的只有说明、功能清单与下载脚本。
 - 重新获取：`python feature-tests/garmin_health/fetch_source.py`。
+
+## 九、本地 FIT 样本（不入库）
+
+`数据分析/` 用于第二阶段数据分析的本地 FIT 样本（1 条 Garmin 原始 FIT）：
+
+- 隐私：`.fit` / `.zip` 由该目录 `.gitignore` 排除，含 GPS 与心率等个人数据，**不进入仓库**；
+- 用途：运行 `feature-tests/garmin_health/standalone/analyze_fit.py` 做数据质量检查与指标复算，样本可随时删除；
+- 获取方式与分析命令见 `数据分析/README.md`。
