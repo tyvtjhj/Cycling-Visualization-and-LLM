@@ -59,6 +59,7 @@
 | 2026-10-20 | 新增 `feature-tests/garmin_health/SYNC_DB.md`：记录开发期镜像库 v1→v3 结构变更、709 条活动同步校验与下载索引 | 已完成 |
 | 2026-10-20 | 新建 `feature-tests/数据分析/` 本地 FIT 样本目录（`.fit`/`.zip` 已 gitignore）；新增 `analyze_fit.py` 并完成第二阶段首轮数据分析 | 已完成 |
 | 2026-10-20 | 新增 `feature-tests/数据分析/preprocess.py`：FIT 原始内容盘点脚本（消息统计/字段清单/记录样例，暂不做预处理） | 已完成 |
+| 2026-10-21 | 新增 `feature-tests/数据分析/index.html` 简易浏览页：本地读取 preprocess JSON 展示文件/消息/session/record；页面本身不含个人数据 | 已完成 |
 
 ### 4.1 双远端同步
 

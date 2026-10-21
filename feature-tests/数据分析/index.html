@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FIT 数据分析 · 本地浏览</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --card: #ffffff;
+      --border: #e3e6eb;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+      line-height: 1.55;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
+    header h1 { margin: 0 0 6px; font-size: 26px; }
+    header p { margin: 0; color: var(--muted); }
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+      margin: 22px 0; padding: 16px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 12px;
+    }
+    .toolbar input[type="file"] { flex: 1 1 260px; }
+    button {
+      border: 0; border-radius: 8px; padding: 9px 16px; cursor: pointer;
+      background: var(--accent); color: #fff; font-size: 14px;
+    }
+    button.secondary { background: var(--accent-soft); color: var(--accent); }
+    #status { color: var(--muted); font-size: 14px; }
+    .cards {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px; margin-bottom: 18px;
+    }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px 16px;
+    }
+    .card .label { color: var(--muted); font-size: 13px; }
+    .card .value { font-size: 22px; font-weight: 650; margin-top: 4px; word-break: break-all; }
+    section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 16px; }
+    section h2 { margin: 0 0 12px; font-size: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      background: var(--accent-soft); color: var(--accent);
+      border-radius: 999px; padding: 4px 10px; font-size: 13px;
+    }
+    pre {
+      margin: 0; padding: 12px; background: #0f172a; color: #e2e8f0;
+      border-radius: 10px; overflow: auto; font-size: 12px; max-height: 260px;
+    }
+    .hint { color: var(--muted); font-size: 14px; }
+    .hidden { display: none; }
+    footer { color: var(--muted); font-size: 13px; margin-top: 24px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>FIT 数据分析</h1>
+    <p>本地浏览页：只读取 preprocess.py 生成的 JSON，不连接网络、不上传数据。</p>
+  </header>
+
+  <div class="toolbar">
+    <input id="fileInput" type="file" accept=".json,application/json">
+    <button id="loadBtn">加载 JSON</button>
+    <button id="reloadBtn" class="secondary">重新读取 output/fit_summary.json</button>
+    <span id="status">等待数据…</span>
+  </div>
+
+  <div id="app" class="hidden">
+    <div id="cards" class="cards"></div>
+
+    <section>
+      <h2>文件与运动</h2>
+      <table id="fileTable"><tbody></tbody></table>
+    </section>
+
+    <section>
+      <h2>消息类型统计</h2>
+      <table id="messageTable">
+        <thead><tr><th>消息类型</th><th class="num">帧数</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>session 字段</h2>
+      <table id="sessionTable">
+        <thead><tr><th>字段</th><th>值</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>record 字段</h2>
+      <div id="recordFields" class="chips"></div>
+      <p class="hint" id="recordCount"></p>
+    </section>
+
+    <section>
+      <h2>record 首条 / 末条</h2>
+      <p class="hint">首条</p>
+      <pre id="firstRecord"></pre>
+      <p class="hint">末条</p>
+      <pre id="lastRecord"></pre>
+    </section>
+  </div>
+
+  <footer>
+    数据由 <code>preprocess.py --json</code> 生成，保存在 <code>output/</code>（已 gitignore）。
+    本页面模板不含任何个人数据。
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+
+  function fmt(value) {
+    if (value === null || value === undefined) return "—";
+    if (typeof value === "object") return JSON.stringify(value);
+    return String(value);
+  }
+
+  function textRow(table, cells) {
+    const tr = document.createElement("tr");
+    cells.forEach((cell) => {
+      const td = document.createElement("td");
+      td.textContent = fmt(cell);
+      tr.appendChild(td);
+    });
+    table.tBodies[0].appendChild(tr);
+  }
+
+  function render(data) {
+    const file = data.file || {};
+    const frames = data.frames || {};
+    const session = data.session || {};
+    const fileId = data.file_id || {};
+    const sport = data.sport || {};
+
+    $("status").textContent = "已加载：" + (file.name || "fit_summary.json");
+    $("app").classList.remove("hidden");
+
+    document.querySelectorAll("#cards .card").forEach((el) => el.remove());
+    const cards = [
+      ["文件大小", (file.size_bytes || 0).toLocaleString() + " B"],
+      ["DATA 帧数", frames.data_frames || 0],
+      ["消息类型", frames.message_types || 0],
+      ["record 条数", data.record_count || 0],
+    ];
+    cards.forEach(([label, value]) => {
+      const card = document.createElement("div");
+      card.className = "card";
+      const l = document.createElement("div");
+      l.className = "label";
+      l.textContent = label;
+      const v = document.createElement("div");
+      v.className = "value";
+      v.textContent = String(value);
+      card.appendChild(l);
+      card.appendChild(v);
+      $("cards").appendChild(card);
+    });
+
+    const fileTbody = $("fileTable").tBodies[0];
+    fileTbody.innerHTML = "";
+    [
+      ["文件名", file.name],
+      ["SHA256", file.sha256],
+      ["file_id.type", fileId.type],
+      ["file_id.manufacturer", fileId.manufacturer],
+      ["file_id.product", fileId.product],
+      ["sport", sport.sport],
+      ["sub_sport", sport.sub_sport],
+      ["lap 数量", data.lap_count],
+      ["session 字段数", Object.keys(session).length],
+      ["record 字段数", (data.record_fields || []).length],
+    ].forEach((cells) => textRow($("fileTable"), cells));
+
+    const msgTbody = $("messageTable").tBodies[0];
+    msgTbody.innerHTML = "";
+    Object.entries(data.message_counts || {}).forEach(([name, count]) => {
+      textRow($("messageTable"), [name, count]);
+    });
+
+    const sessionTbody = $("sessionTable").tBodies[0];
+    sessionTbody.innerHTML = "";
+    Object.keys(session).sort().forEach((key) => {
+      textRow($("sessionTable"), [key, session[key]]);
+    });
+
+    const fieldBox = $("recordFields");
+    fieldBox.innerHTML = "";
+    (data.record_fields || []).forEach((name) => {
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chip.textContent = name;
+      fieldBox.appendChild(chip);
+    });
+    $("recordCount").textContent = "共 " + (data.record_fields || []).length + " 个 record 字段。";
+    $("firstRecord").textContent = JSON.stringify(data.record_first || {}, null, 2);
+    $("lastRecord").textContent = JSON.stringify(data.record_last || {}, null, 2);
+  }
+
+  function loadObject(obj) {
+    try {
+      render(obj);
+    } catch (err) {
+      $("status").textContent = "渲染失败：" + err.message;
+    }
+  }
+
+  function loadFromFile(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        loadObject(JSON.parse(reader.result));
+      } catch (err) {
+        $("status").textContent = "JSON 解析失败：" + err.message;
+      }
+    };
+    reader.readAsText(file, "utf-8");
+  }
+
+  async function fetchDefault() {
+    try {
+      const resp = await fetch("output/fit_summary.json", { cache: "no-store" });
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      loadObject(await resp.json());
+    } catch (err) {
+      $("status").textContent =
+        "未找到 output/fit_summary.json（" + err.message + "）。可在下方选择文件，或按 README 先生成 JSON。";
+    }
+  }
+
+  $("loadBtn").addEventListener("click", () => {
+    const file = $("fileInput").files[0];
+    if (!file) {
+      $("status").textContent = "请先选择一个 JSON 文件";
+      return;
+    }
+    loadFromFile(file);
+  });
+
+  $("reloadBtn").addEventListener("click", fetchDefault);
+  $("fileInput").addEventListener("change", () => {
+    const file = $("fileInput").files[0];
+    if (file) loadFromFile(file);
+  });
+
+  fetchDefault();
+})();
+</script>
+</body>
+</html>
